@@ -1,3 +1,5 @@
+'use strict';
+
 var https = require('https');
 var bitlyUrl = "https://api-ssl.bitly.com//v3/shorten?";
 

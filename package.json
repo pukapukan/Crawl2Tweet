@@ -4,14 +4,13 @@
   "description": "Crawl a site to tweet most up to date articles",
   "main": "lib/crawler.js",
   "author": "Jason Park",
-  "repository" : {
-    "type" : "git",
-    "url" : "https://github.com/pukapukan/Crawl2Tweet.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pukapukan/Crawl2Tweet.git"
   },
-  "bugs" : {
-    "url" : "https://github.com/pukapukan/Crawl2Tweet/issues"
+  "bugs": {
+    "url": "https://github.com/pukapukan/Crawl2Tweet/issues"
   },
-
   "dependencies": {
     "iconv": "*",
     "jsdom": "*",
@@ -26,5 +25,12 @@
     "bot"
   ],
   "license": "MIT",
-  "readmeFilename": "README.md"
+  "homepage": "https://github.com/pukapukan/Crawl2Tweet",
+  "directories": {
+    "example": "example"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
 }
