@@ -1,0 +1,30 @@
+{
+  "name": "crawl2tweet",
+  "version": "0.0.1",
+  "description": "Crawl a site to tweet most up to date articles",
+  "main": "lib/crawler.js",
+  "author": "Jason Park",
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/pukapukan/Crawl2Tweet.git"
+  },
+  "bugs" : {
+    "url" : "https://github.com/pukapukan/Crawl2Tweet/issues"
+  },
+
+  "dependencies": {
+    "iconv": "*",
+    "jsdom": "*",
+    "mongodb": "*",
+    "oauth": "*",
+    "async": "*"
+  },
+  "keywords": [
+    "crawl",
+    "crawler",
+    "tweet",
+    "bot"
+  ],
+  "license": "MIT",
+  "readmeFilename": "README.md"
+}
