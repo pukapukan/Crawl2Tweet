@@ -5,7 +5,6 @@ var mongo = require('mongodb'),
     async = require('async'),
     Twitter = require('easy-tweet'),
     Q = require('q');
-    MongoException = require('./MongoException'),
 
 var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
   return new Q.Promise(function (resolve, reject) {
@@ -20,7 +19,7 @@ var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
 
 var loadDom = function loadDom(url) {
   return new Q.Promise(function (resolve, reject) {
-    jsdom.env({{
+    jsdom.env({
       url: options.url,
       scripts: [ "http://code.jquery.com/jquery.min.js" ],
       done: function (err, window) {

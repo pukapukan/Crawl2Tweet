@@ -20,7 +20,7 @@
   },
   "devDependencie": {
     "easy-bitly": "git+https://github.com/pukapukan/easy-bitly.git"
-  }
+  },
   "keywords": [
     "crawl",
     "crawler",
