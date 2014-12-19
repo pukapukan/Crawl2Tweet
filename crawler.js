@@ -4,7 +4,8 @@ var mongo = require('mongodb'),
     jsdom = require('jsdom'),
     async = require('async'),
     Twitter = require('easy-tweet'),
-    Q = require('q');
+    Q = require('q'),
+    twitter;
 
 var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
   return new Q.Promise(function (resolve, reject) {
@@ -20,18 +21,21 @@ var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
 var loadDom = function loadDom(url) {
   return new Q.Promise(function (resolve, reject) {
     jsdom.env({
-      url: options.url,
-      scripts: [ "http://code.jquery.com/jquery.min.js" ],
+      url: url,
       done: function (err, window) {
-        if(err) reject(err);
-        else resolve(window);
+        if (err) reject(err);
+        else {
+          jsdom.jQueryify(window, 'http://code.jquery.com/jquery-2.1.1.js', function () {
+            resolve(window);
+          });
+        }
       }
     });
   });
 }
 
 var isFunction = function isFunction(f) {
-  return f && typeof(f) === "function";
+  return f && typeof(f) === 'function';
 };
 
 var getItemCount = function getItemCount(collection, identifier) {
@@ -51,9 +55,10 @@ var saveAndTweet = function saveAndTweet(collection, identifier, content) {
     };
 
     collection.insert(newRecord, function(err, result){
-      if(err) reject(err);
-      else {
-        twitter.tweet(item.content);
+      if(err) {
+        reject(err);
+      } else {
+        twitter.tweet(content);
         resolve();
       }
     });
@@ -77,14 +82,14 @@ var saveAndTweet = function saveAndTweet(collection, identifier, content) {
 // }
 
 module.exports = function(options) {
-  var interval = parseInt(options.interval),
-      twitter = new Twitter(
-        options.twitter.api_key,
-        options.twitter.api_secret,
-        options.twitter.access_token,
-        options.twitter.access_token_secret
-      );
+  twitter = new Twitter(
+    options.twitter.api_key,
+    options.twitter.api_secret,
+    options.twitter.access_token,
+    options.twitter.access_token_secret
+  );
 
+  var interval = parseInt(options.interval);
   if(interval > 0) {
     setInterval(run, interval)
   }
@@ -106,11 +111,14 @@ module.exports = function(options) {
             getItemCount(collection, id)
               .then(function (count) {
                 if(count === 0) {
-                  saveAndTwee(collection, id, content).then(done);
+                  saveAndTweet(collection, id, content).then(done);
                 } else {
                   done();
                 }
               });
+          }, function(err) {
+            // free memory associated with the window
+            window.close();
           });
         });
       });
