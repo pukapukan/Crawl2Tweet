@@ -24,13 +24,6 @@ Options:
   done: function(err, twittedArticles)
 }
 
-
-You need to pass parameters required to link application to MongoDB - for tracking tweeted articles, and Twitter.
-
-retrieveList:
-
-done:
-
 TODO:
 - [ ] Update Readme.md
 - [ ] Add comments to code
