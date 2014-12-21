@@ -18,7 +18,7 @@ var promiseCallback = function promiseCallback (reject, resolve) {
 };
 
 var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
-  return new Q.Promise(function (resolve, reject) {
+  return Q.Promise(function (resolve, reject) {
     mongo.MongoClient.connect(dbUrl, { native_parser:true }, function(err, db) {
       db.collection(collectionName, promiseCallback(reject, resolve));
     });
@@ -26,7 +26,7 @@ var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
 };
 
 var loadWindow = function loadWindow(url) {
-  return new Q.Promise(function (resolve, reject) {
+  return Q.Promise(function (resolve, reject) {
     jsdom.env({
       url: url,
       done: function (err, window) {
@@ -41,10 +41,10 @@ var loadWindow = function loadWindow(url) {
   });
 };
 
-var loadPages = function loadPages(pages)
-  return new Q.Promise(function (resolve, reject) {
+var loadPages = function loadPages(pages) {
+  return Q.Promise(function (resolve, reject) {
     async.mapSeries(pages, function (page, done) {
-      loadWindow(pageUrl).then(function (window) {
+      loadWindow(page.url).then(function (window) {
         done(null, {
           window: window,
           query: page.query
@@ -58,7 +58,7 @@ var loadPages = function loadPages(pages)
 };
 
 var queryPages = function queryPages(collection, pages) {
-  return new Q.Promise(resolve, reject) {
+  return Q.Promise(function(resolve, reject) {
     async.map(pages, function (page, done) {
       page.query(page.window, function (items) {
         page.window.close();
@@ -68,17 +68,17 @@ var queryPages = function queryPages(collection, pages) {
       if (err) reject(err);
       else resolve(results);
     });
-  };
+  });
 };
 
 var getItemCount = function getItemCount(collection, identifier) {
-  return new Q.Promise(function (resolve, reject) {
+  return Q.Promise(function (resolve, reject) {
     collection.count({ identifier: identifier }, promiseCallback(resolve, reject));
   })
 };
 
 var saveAndTweet = function saveAndTweet(collection, twitterClient, identifier, content) {
-  return new Q.Promise(function (resolve, reject) {
+  return Q.Promise(function (resolve, reject) {
     var newRecord = {
       identifier: identifier,
       content: content
@@ -96,7 +96,7 @@ var saveAndTweet = function saveAndTweet(collection, twitterClient, identifier, 
 };
 
 var processQueryResults = function processQueryResults(results, collection, twitterClient) {
-  return new Q.Promise(resolve, reject) {
+  return Q.Promise(function(resolve, reject) {
     var itemIterator = function (item, done) {
       var id = item.identifier;
       var content = item.content;
@@ -115,7 +115,7 @@ var processQueryResults = function processQueryResults(results, collection, twit
     };
 
     async.each(results, pageIterator, promiseCallback(resolve, reject));
-  };
+  });
 };
 
 var throwError = function (exitOnError) {
@@ -127,43 +127,43 @@ var throwError = function (exitOnError) {
   };
 };
 
-options = {
-  interval: milliseconds, -- default: 0, any value less than or equal to 0 will not trigger the crawler to run periodically
-  exitOnError: boolean, -- default: false
-  mongoDB: {
-    url: string,
-    collection: string
-  },
-  twitter: {
-    api_key: string,
-    api_secret: string,
-    access_token: string,
-    access_token_secret: string
-  },
-  pages: [
-    {
-      url: string,
-      query: function(window, callback) -- custom callback to customise query page and filter items to tweet.  the callback function is expected to return an array of object which consists of 'identifier' and 'content' properties.  'identifier' will be used as a key in the MongoDB collection and content will be tweet if its identifier doesn not exist in the collection.
-    }
-  ]
-}
+// options = {
+//   interval: milliseconds, -- default: 0, any value less than or equal to 0 will not trigger the crawler to run periodically
+//   exitOnError: boolean, -- default: false
+//   mongoDB: {
+//     url: string,
+//     collection: string
+//   },
+//   twitter: {
+//     api_key: string,
+//     api_secret: string,
+//     access_token: string,
+//     access_token_secret: string
+//   },
+//   pages: [
+//     {
+//       url: string,
+//       query: function(window, callback) -- custom callback to customise query page and filter items to tweet.  the callback function is expected to return an array of object which consists of 'identifier' and 'content' properties.  'identifier' will be used as a key in the MongoDB collection and content will be tweet if its identifier doesn not exist in the collection.
+//     }
+//   ]
+// }
 
 module.exports = function(options) {
   var twitterClient = new Twitter(
-    twitterOptions.api_key,
-    twitterOptions.api_secret,
-    twitterOptions.access_token,
-    twitterOptions.access_token_secret
+    options.twitter.api_key,
+    options.twitter.api_secret,
+    options.twitter.access_token,
+    options.twitter.access_token_secret
   );
 
   var crawl = function crawl() {
     var dbOptions = options.mongoDB;
 
-    var promisedPagesQueries = loadPages(options.pages)).then(queryPages);
+    var promisedPagesQueries = loadPages(options.pages).then(queryPages);
     var promisedCollection = getMongoCollection(dbOptions.url, dbOptions.collection);
     var promisedTwitter = Q.fcall(function() { return twitterClient; });
 
-    Q.all()[
+    Q.all([
         promisedPagesQueries,
         promisedCollection,
         promisedTwitter
