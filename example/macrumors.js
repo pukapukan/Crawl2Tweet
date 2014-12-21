@@ -49,7 +49,6 @@ var retrieveLits = function retrieveLits(window, callback){
 
 Crawler({
   interval:               300000,  // 5 minutes
-  url:                   'http://www.macrumors.com',
   mongoDB: {
     url:                 'mongodb url',
     collection:          'macrumors'
@@ -60,5 +59,8 @@ Crawler({
     access_token:        'twitter access token',
     access_token_secret: 'twitter acccess token secret'
   },
-  retrieveList:          retrieveLits
+  pages: [{
+    url:                  'http://www.macrumors.com',
+    query:                retrieveLits
+  }]
 });

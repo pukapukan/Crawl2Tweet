@@ -3,13 +3,14 @@ Crawl2Tweet
 
 It's a simple crawl bot implementation to help you tweet new articles from a specific website.
 
-How to use it
--------------
-
 Options:
+-----
+
+
+```
 {
-  interval: number, -- milliseconds
-  url: string,
+  interval: number, -- default: 0, any value less than or equal to 0 will not trigger the crawler to run periodically
+  exitOnError: boolean, -- default: false
   mongoDB: {
     url: string,
     collection: string
@@ -20,9 +21,14 @@ Options:
     access_token: string,
     access_token_secret: string
   },
-  retrieveList: function(err, window.jQuery, callback)
-  done: function(err, twittedArticles)
+  pages: [
+    {
+      url: string,
+      query: function(window, callback) -- custom callback to customise query page and filter items to tweet.  the callback function is expected to return an array of object which consists of 'identifier' and 'content' properties.  'identifier' will be used as a key in the MongoDB collection and content will be tweet if its identifier doesn not exist in the collection.
+    }
+  ]
 }
+```
 
 TODO:
 - [ ] Update Readme.md

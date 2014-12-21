@@ -4,21 +4,28 @@ var mongo = require('mongodb'),
     jsdom = require('jsdom'),
     async = require('async'),
     Twitter = require('easy-tweet'),
-    Q = require('q'),
-    twitter;
+    Q = require('q');
+
+var isFunction = function isFunction(f) {
+  return f && typeof(f) === 'function';
+};
+
+var promiseCallback = function promiseCallback (reject, resolve) {
+  return function (err, result) {
+    if(err) reject(err);
+    else resolve(result);
+  };
+};
 
 var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
   return new Q.Promise(function (resolve, reject) {
     mongo.MongoClient.connect(dbUrl, { native_parser:true }, function(err, db) {
-      db.collection(collectionName, function(err, collection){
-        if(err) reject(err);
-        else resolve(collection);
-      });
+      db.collection(collectionName, promiseCallback(reject, resolve));
     });
   });
 };
 
-var loadDom = function loadDom(url) {
+var loadWindow = function loadWindow(url) {
   return new Q.Promise(function (resolve, reject) {
     jsdom.env({
       url: url,
@@ -32,22 +39,45 @@ var loadDom = function loadDom(url) {
       }
     });
   });
-}
+};
 
-var isFunction = function isFunction(f) {
-  return f && typeof(f) === 'function';
+var loadPages = function loadPages(pages)
+  return new Q.Promise(function (resolve, reject) {
+    async.mapSeries(pages, function (page, done) {
+      loadWindow(pageUrl).then(function (window) {
+        done(null, {
+          window: window,
+          query: page.query
+        });
+      })
+    }, function (err, results) {
+      if(err) reject(err);
+      else resolve([collection, results]);
+    });
+  });
+};
+
+var queryPages = function queryPages(collection, pages) {
+  return new Q.Promise(resolve, reject) {
+    async.map(pages, function (page, done) {
+      page.query(page.window, function (items) {
+        page.window.close();
+        done(items);
+      });
+    }, function(err, results) {
+      if (err) reject(err);
+      else resolve(results);
+    });
+  };
 };
 
 var getItemCount = function getItemCount(collection, identifier) {
   return new Q.Promise(function (resolve, reject) {
-    collection.count({ identifier: identifier }, function(err, count){
-      if(err) reject(err);
-      else resolve(count);
-    });
+    collection.count({ identifier: identifier }, promiseCallback(resolve, reject));
   })
 };
 
-var saveAndTweet = function saveAndTweet(collection, identifier, content) {
+var saveAndTweet = function saveAndTweet(collection, twitterClient, identifier, content) {
   return new Q.Promise(function (resolve, reject) {
     var newRecord = {
       identifier: identifier,
@@ -58,71 +88,96 @@ var saveAndTweet = function saveAndTweet(collection, identifier, content) {
       if(err) {
         reject(err);
       } else {
-        twitter.tweet(content);
+        twitterClient.tweet(content);
         resolve();
       }
     });
   });
 };
 
-// options = {
-//   interval: number, -- in milliseconds
-//   url: string,
-//   mongoDB: {
-//     url: string,
-//     collection: string
-//   },
-//   twitter: {
-//     api_key: string,
-//     api_secret: string,
-//     access_token: string,
-//     access_token_secret: string
-//   },
-//   retrieveList: function(window, callback)
-// }
+var processQueryResults = function processQueryResults(results, collection, twitterClient) {
+  return new Q.Promise(resolve, reject) {
+    var itemIterator = function (item, done) {
+      var id = item.identifier;
+      var content = item.content;
+
+      getItemCount(collection, id).then(function (count) {
+        if(count === 0) {
+          saveAndTweet(collection, twitterClient, id, content).then(done);
+        } else {
+          done();
+        }
+      });
+    };
+
+    var pageIterator = function (pageItems, done){
+      async.each(pageItems, itemIterator, done);
+    };
+
+    async.each(results, pageIterator, promiseCallback(resolve, reject));
+  };
+};
+
+var throwError = function (exitOnError) {
+  return function throwError(err) {
+    console.error('something went wrong', err);
+    if (exitOnError) {
+      process.exit(-1);
+    }
+  };
+};
+
+options = {
+  interval: milliseconds, -- default: 0, any value less than or equal to 0 will not trigger the crawler to run periodically
+  exitOnError: boolean, -- default: false
+  mongoDB: {
+    url: string,
+    collection: string
+  },
+  twitter: {
+    api_key: string,
+    api_secret: string,
+    access_token: string,
+    access_token_secret: string
+  },
+  pages: [
+    {
+      url: string,
+      query: function(window, callback) -- custom callback to customise query page and filter items to tweet.  the callback function is expected to return an array of object which consists of 'identifier' and 'content' properties.  'identifier' will be used as a key in the MongoDB collection and content will be tweet if its identifier doesn not exist in the collection.
+    }
+  ]
+}
 
 module.exports = function(options) {
-  twitter = new Twitter(
-    options.twitter.api_key,
-    options.twitter.api_secret,
-    options.twitter.access_token,
-    options.twitter.access_token_secret
+  var twitterClient = new Twitter(
+    twitterOptions.api_key,
+    twitterOptions.api_secret,
+    twitterOptions.access_token,
+    twitterOptions.access_token_secret
   );
 
+  var crawl = function crawl() {
+    var dbOptions = options.mongoDB;
+
+    var promisedPagesQueries = loadPages(options.pages)).then(queryPages);
+    var promisedCollection = getMongoCollection(dbOptions.url, dbOptions.collection);
+    var promisedTwitter = Q.fcall(function() { return twitterClient; });
+
+    Q.all()[
+        promisedPagesQueries,
+        promisedCollection,
+        promisedTwitter
+      ])
+      .spread(processQueryResults)
+      .catch(throwError(options.exitOnError));
+  };
+
+  // schedule crawler
   var interval = parseInt(options.interval);
   if(interval > 0) {
-    setInterval(run, interval)
-  }
-  run();
-
-  function run() {
-    var dbOptions = options.mongoDB;
-    var retrieveList = options.retrieveList;
-
-    Q.all([
-        getMongoCollection(dbOptions.url, dbOptions.collection),
-        loadDom(options.url)])
-      .spread(function(collection, window) {
-        retrieveList(window, function(items){
-          async.each(items, function(item, done){
-            var id = item.identifier;
-            var content = item.content;
-
-            getItemCount(collection, id)
-              .then(function (count) {
-                if(count === 0) {
-                  saveAndTweet(collection, id, content).then(done);
-                } else {
-                  done();
-                }
-              });
-          }, function(err) {
-            // free memory associated with the window
-            window.close();
-          });
-        });
-      });
+    setInterval(crawl, interval)
   }
 
-
+  // start crawling when the app starts
+  crawl();
 }

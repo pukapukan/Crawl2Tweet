@@ -1,23 +1,18 @@
 {
   "name": "crawl2tweet",
   "version": "0.1.1",
-  "description": "Crawl a site to tweet new articles",
+  "description": "Crawl web pages to tweet new articles",
   "main": "crawler.js",
   "author": "Jason Park",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/pukapukan/Crawl2Tweet.git"
-  },
-  "bugs": {
-    "url": "https://github.com/pukapukan/Crawl2Tweet/issues"
-  },
   "dependencies": {
     "async": "*",
     "easy-tweet": "latest",
-    "easy-bitly": "latest",
     "jsdom": "*",
     "mongodb": "*",
     "q": "*"
+  },
+  "devDependencies": {
+    "easy-bitly": "latest"
   },
   "keywords": [
     "bot",
@@ -25,9 +20,16 @@
     "crawler",
     "tweet"
   ],
-  "license": "MIT",
   "homepage": "https://github.com/pukapukan/Crawl2Tweet",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pukapukan/Crawl2Tweet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pukapukan/Crawl2Tweet/issues"
+  },
   "directories": {
     "example": "example"
   }
+  "license": "MIT",
 }
