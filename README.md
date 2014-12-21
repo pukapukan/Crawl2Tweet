@@ -1,11 +1,12 @@
 Crawl2Tweet
 ===========
 
-It's a simple crawl bot implementation to help you tweet new articles from a specific website.
+It's a simple crawler to tweet new articles from a specific website.
+
+Refer to [example/macrumors.js](https://github.com/pukapukan/Crawl2Tweet/blob/master/example/macrumors.js) to gresp a concept.
 
 Options:
 -----
-
 
 ```
 {
@@ -30,7 +31,8 @@ Options:
 }
 ```
 
-TODO:
+TODO
+----
 - [ ] Update Readme.md
 - [ ] Add comments to code
 - [ ] Publish on blog
