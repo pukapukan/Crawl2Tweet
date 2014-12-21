@@ -1,6 +1,6 @@
 {
   "name": "crawl2tweet",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Crawl web pages to tweet new articles",
   "main": "crawler.js",
   "author": "Jason Park",
@@ -30,6 +30,6 @@
   },
   "directories": {
     "example": "example"
-  }
-  "license": "MIT",
+  },
+  "license": "MIT"
 }
