@@ -6,10 +6,6 @@ var mongo = require('mongodb'),
     Twitter = require('easy-tweet'),
     Q = require('q');
 
-var isFunction = function isFunction(f) {
-  return f && typeof(f) === 'function';
-};
-
 var promiseCallback = function promiseCallback (reject, resolve) {
   return function (err, result) {
     if(err) reject(err);
@@ -17,9 +13,9 @@ var promiseCallback = function promiseCallback (reject, resolve) {
   };
 };
 
-var getMongoCollection = function getMongoCollection(dbUrl, collectionName) {
+var getMongoCollection = function getMongoCollection(url, collectionName) {
   return Q.Promise(function (resolve, reject) {
-    mongo.MongoClient.connect(dbUrl, { native_parser:true }, function(err, db) {
+    mongo.MongoClient.connect(url, { native_parser:true }, function(err, db) {
       db.collection(collectionName, promiseCallback(reject, resolve));
     });
   });
@@ -52,12 +48,12 @@ var loadPages = function loadPages(pages) {
       })
     }, function (err, results) {
       if(err) reject(err);
-      else resolve([collection, results]);
+      else resolve(results);
     });
   });
 };
 
-var queryPages = function queryPages(collection, pages) {
+var queryPages = function queryPages(pages) {
   return Q.Promise(function(resolve, reject) {
     async.map(pages, function (page, done) {
       page.query(page.window, function (items) {
@@ -77,18 +73,14 @@ var getItemCount = function getItemCount(collection, identifier) {
   })
 };
 
-var saveAndTweet = function saveAndTweet(collection, twitterClient, identifier, content) {
+var saveAndTweet = function saveAndTweet(collection, twitterClient, item) {
   return Q.Promise(function (resolve, reject) {
-    var newRecord = {
-      identifier: identifier,
-      content: content
-    };
 
-    collection.insert(newRecord, function(err, result){
+    collection.insert(item, function(err, result){
       if(err) {
         reject(err);
       } else {
-        twitterClient.tweet(content);
+        twitterClient.tweet(item);
         resolve();
       }
     });
@@ -97,39 +89,29 @@ var saveAndTweet = function saveAndTweet(collection, twitterClient, identifier, 
 
 var processQueryResults = function processQueryResults(results, collection, twitterClient) {
   return Q.Promise(function(resolve, reject) {
-    var itemIterator = function (item, done) {
+    var processResult = function (item, done) {
       var id = item.identifier;
-      var content = item.content;
 
       getItemCount(collection, id).then(function (count) {
         if(count === 0) {
-          saveAndTweet(collection, twitterClient, id, content).then(done);
+          saveAndTweet(collection, twitterClient, item).then(done);
         } else {
           done();
         }
       });
     };
 
-    var pageIterator = function (pageItems, done){
-      async.each(pageItems, itemIterator, done);
+    // iterate over query results from a page
+    var pageResultIterator = function (pageItems, done){
+      async.each(pageItems, processResult, done);
     };
 
-    async.each(results, pageIterator, promiseCallback(resolve, reject));
+    // iterate over query results
+    async.each(results, pageResultIterator, promiseCallback(resolve, reject));
   });
 };
 
-var throwError = function (exitOnError) {
-  return function throwError(err) {
-    console.error('something went wrong', err);
-    if (exitOnError) {
-      process.exit(-1);
-    }
-  };
-};
-
 // options = {
-//   interval: milliseconds, -- default: 0, any value less than or equal to 0 will not trigger the crawler to run periodically
-//   exitOnError: boolean, -- default: false
 //   mongoDB: {
 //     url: string,
 //     collection: string
@@ -143,41 +125,38 @@ var throwError = function (exitOnError) {
 //   pages: [
 //     {
 //       url: string,
-//       query: function(window, callback) -- custom callback to customise query page and filter items to tweet.  the callback function is expected to return an array of object which consists of 'identifier' and 'content' properties.  'identifier' will be used as a key in the MongoDB collection and content will be tweet if its identifier doesn not exist in the collection.
+//       query: function(window, callback)
 //     }
 //   ]
 // }
-
-module.exports = function(options) {
-  var twitterClient = new Twitter(
+var Crawler = function (options) {
+  var _twitterClient = new Twitter(
     options.twitter.api_key,
     options.twitter.api_secret,
     options.twitter.access_token,
     options.twitter.access_token_secret
   );
 
-  var crawl = function crawl() {
-    var dbOptions = options.mongoDB;
+  Object.defineProperties(this, {
+    options: {
+      value: options
+    },
+    twitterClient: {
+      value: _twitterClient
+    }
+  });
+};
 
-    var promisedPagesQueries = loadPages(options.pages).then(queryPages);
-    var promisedCollection = getMongoCollection(dbOptions.url, dbOptions.collection);
-    var promisedTwitter = Q.fcall(function() { return twitterClient; });
+Crawler.prototype.run = function() {
+  var options = this.options;
+  var twitterClient = this.twitterClient;
 
-    Q.all([
-        promisedPagesQueries,
-        promisedCollection,
-        promisedTwitter
-      ])
-      .spread(processQueryResults)
-      .catch(throwError(options.exitOnError));
-  };
+  var getQueryResults = loadPages(options.pages).then(queryPages);
+  var getCollection = getMongoCollection(options.dbOptions.url, options.dbOptions.collection);
+  var getTwitterClient = Q.fcall(function() { return twitterClient; });
 
-  // schedule crawler
-  var interval = parseInt(options.interval);
-  if(interval > 0) {
-    setInterval(crawl, interval)
-  }
+  return Q.all([ getQueryResults, getCollection, getTwitterClient ])
+          .spread(processQueryResults);
+};
 
-  // start crawling when the app starts
-  crawl();
-}
+module.exports = Crawler;
