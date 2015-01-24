@@ -6,14 +6,14 @@ var mongo = require('mongodb'),
     Twitter = require('easy-tweet'),
     Q = require('q');
 
-var promiseCallback = function promiseCallback (reject, resolve) {
+var promiseCallback = function (reject, resolve) {
   return function (err, result) {
     if(err) reject(err);
     else resolve(result);
   };
 };
 
-var getMongoCollection = function getMongoCollection(url, collectionName) {
+var getMongoCollection = function (url, collectionName) {
   return Q.Promise(function (resolve, reject) {
     mongo.MongoClient.connect(url, { native_parser:true }, function(err, db) {
       db.collection(collectionName, promiseCallback(reject, resolve));
@@ -21,7 +21,7 @@ var getMongoCollection = function getMongoCollection(url, collectionName) {
   });
 };
 
-var loadWindow = function loadWindow(url) {
+var loadWindow = function (url) {
   return Q.Promise(function (resolve, reject) {
     jsdom.env({
       url: url,
@@ -37,13 +37,13 @@ var loadWindow = function loadWindow(url) {
   });
 };
 
-var loadPages = function loadPages(pages) {
+var queryPages = function (pages) {
   return Q.Promise(function (resolve, reject) {
     async.mapSeries(pages, function (page, done) {
       loadWindow(page.url).then(function (window) {
-        done(null, {
-          window: window,
-          query: page.query
+        page.query(window, function (items) {
+          window.close();
+          done(null, items)
         });
       })
     }, function (err, results) {
@@ -53,47 +53,33 @@ var loadPages = function loadPages(pages) {
   });
 };
 
-var queryPages = function queryPages(pages) {
-  return Q.Promise(function(resolve, reject) {
-    async.map(pages, function (page, done) {
-      page.query(page.window, function (items) {
-        page.window.close();
-        done(items);
-      });
-    }, function(err, results) {
-      if (err) reject(err);
-      else resolve(results);
-    });
-  });
-};
-
-var getItemCount = function getItemCount(collection, identifier) {
+var getItemCount = function (collection, identifier) {
   return Q.Promise(function (resolve, reject) {
-    collection.count({ identifier: identifier }, promiseCallback(resolve, reject));
+    collection.findOne({ identifier: identifier }, promiseCallback(resolve, reject));
   })
 };
 
-var saveAndTweet = function saveAndTweet(collection, twitterClient, item) {
+var saveAndTweet = function (collection, twitterClient, item) {
   return Q.Promise(function (resolve, reject) {
 
     collection.insert(item, function(err, result){
       if(err) {
         reject(err);
       } else {
-        twitterClient.tweet(item);
+        twitterClient.tweet(item.content);
         resolve();
       }
     });
   });
 };
 
-var processQueryResults = function processQueryResults(results, collection, twitterClient) {
+var processQueryResults = function (results, collection, twitterClient) {
   return Q.Promise(function(resolve, reject) {
     var processResult = function (item, done) {
       var id = item.identifier;
 
-      getItemCount(collection, id).then(function (count) {
-        if(count === 0) {
+      collection.findOne({ identifier: id }, function (err, doc) {
+        if(!doc) {
           saveAndTweet(collection, twitterClient, item).then(done);
         } else {
           done();
@@ -106,8 +92,16 @@ var processQueryResults = function processQueryResults(results, collection, twit
       async.each(pageItems, processResult, done);
     };
 
+    var closeDB = function (err) {
+      if(err) {
+        reject(err);
+      }
+      collection.db.close();
+      resolve();
+    }
+
     // iterate over query results
-    async.each(results, pageResultIterator, promiseCallback(resolve, reject));
+    async.each(results, pageResultIterator, closeDB);
   });
 };
 
@@ -151,8 +145,8 @@ Crawler.prototype.run = function() {
   var options = this.options;
   var twitterClient = this.twitterClient;
 
-  var getQueryResults = loadPages(options.pages).then(queryPages);
-  var getCollection = getMongoCollection(options.dbOptions.url, options.dbOptions.collection);
+  var getQueryResults = queryPages(options.pages);
+  var getCollection = getMongoCollection(options.mongoDB.url, options.mongoDB.collection);
   var getTwitterClient = Q.fcall(function() { return twitterClient; });
 
   return Q.all([ getQueryResults, getCollection, getTwitterClient ])

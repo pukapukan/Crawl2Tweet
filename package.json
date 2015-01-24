@@ -1,15 +1,15 @@
 {
   "name": "crawl2tweet",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Crawl web pages to tweet new articles",
   "main": "crawler.js",
   "author": "Jason Park",
   "dependencies": {
-    "async": "*",
+    "async": "^0.9.0",
     "easy-tweet": "latest",
-    "jsdom": "*",
-    "mongodb": "*",
-    "q": "*"
+    "jsdom": "^1.5.0",
+    "mongodb": "^1.4.25",
+    "q": "^1.1.12"
   },
   "devDependencies": {
     "easy-bitly": "latest"
