@@ -3,7 +3,7 @@
 var Crawler = require('../crawler'),
     bitly = require('easy-bitly'),
     async = require('async'),
-    bitlyAccessToken = '<bitly access token>';
+    bitlyAccessToken = process.env.bitly.token || '<bitly access token>';
 
 // To tweet title + shortened link of article on engineering.laterooms.com
 var retrieveLits = function (window, callback){
@@ -42,14 +42,14 @@ var retrieveLits = function (window, callback){
 
 var options = {
   mongoDB: {
-    url:                 '<mongodb connection url>',
-    collection:          '<mongodb collection>'
+    url:                 process.env.mongoUrl || '<mongodb connection url>',
+    collection:          process.env.collection || '<mongodb collection>'
   },
   twitter: {
-    api_key:             '<twitter api key>',
-    api_secret:          '<twitter api secret>',
-    access_token:        '<twitter access token>',
-    access_token_secret: '<twitter access seret>'
+    api_key:             process.env.twitter.api || '<twitter api key>',
+    api_secret:          process.env.twitter.apiSecret || '<twitter api secret>',
+    access_token:        process.env.twitter.token || '<twitter access token>',
+    access_token_secret: process.env.twitter.tokenSecret || '<twitter access seret>'
   },
   pages: [{
     url:                  'http://engineering.laterooms.com',
