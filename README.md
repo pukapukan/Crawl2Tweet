@@ -1,9 +1,9 @@
 Crawl2Tweet
 ===========
 
-It's a simple crawler to tweet new articles from a specific website.
+It's a simple crawler that tweets new articles from webpages.
 
-Refer to [example/laterooms.js](https://github.com/pukapukan/Crawl2Tweet/blob/master/example/laterooms.js) to grasp a concept.
+Check out [example/laterooms.js](https://github.com/pukapukan/Crawl2Tweet/blob/master/example/laterooms.js) for more.
 
 Options:
 -----
