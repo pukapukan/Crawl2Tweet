@@ -66,6 +66,8 @@ var run = function() {
   });
 };
 
+run();
+
 // crawl every 1 hour
 var interval = 1000 * 60 * 60;
 setInterval(run, interval);
