@@ -5,11 +5,11 @@
   "main": "crawler.js",
   "author": "Jason Park",
   "dependencies": {
-    "async": "^0.9.0",
+    "async": "latest",
     "easy-tweet": "latest",
-    "jsdom": "^1.5.0",
-    "mongodb": "^1.4.25",
-    "q": "^1.1.12"
+    "jsdom": "1.5.0",
+    "mongodb": "1.4.25",
+    "q": "latest"
   },
   "devDependencies": {
     "easy-bitly": "latest"
