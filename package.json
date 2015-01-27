@@ -8,8 +8,7 @@
     "async": "latest",
     "easy-tweet": "latest",
     "jsdom": "1.5.0",
-    "mongodb": "1.4.25",
-    "q": "latest"
+    "mongodb": "1.4.25"
   },
   "devDependencies": {
     "easy-bitly": "latest"
